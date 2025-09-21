@@ -1,7 +1,7 @@
 ## To-dos
 
-1. Dockerize app
-2. Docker-compose file
+1. Dockerize app -- done
+2. Docker-compose file -- done
 3. Environment variables
 4. Swagger
 5. Database design
