@@ -9,3 +9,7 @@
 7. Carts module
 8. Product module
 9. Order module
+
+---
+
+![Initial DB Design](./docs/initial-db-design.png)
