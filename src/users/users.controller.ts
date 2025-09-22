@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { Types } from 'mongoose';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { GetUserByEmailDto } from './dtos/get-users.dto';
 
 @Controller('users')
 export class UsersController {
@@ -33,8 +34,8 @@ export class UsersController {
   }
 
   @Get('email/:email')
-  findByEmail(@Param('email') email: string) {
-    return this.usersService.findByEmail(email);
+  findByEmail(@Param('email') email: GetUserByEmailDto) {
+    return this.usersService.findByEmail(email.email);
   }
 
   @Get(':id')
