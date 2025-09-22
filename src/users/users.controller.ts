@@ -6,6 +6,7 @@ import {
   Param,
   BadRequestException,
   Put,
+  Delete,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -46,6 +47,17 @@ export class UsersController {
 
   @Put(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+    return this.usersService.delete(id);
   }
 }
