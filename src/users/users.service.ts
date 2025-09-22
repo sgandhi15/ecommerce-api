@@ -40,4 +40,36 @@ export class UsersService {
     const { password, ...userWithoutPassword } = userObject;
     return userWithoutPassword;
   }
+
+  async findById(id: string): Promise<Omit<User, 'password'>> {
+    const user = await this.userModel.findById(id).select('-password').exec();
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
+  }
+
+  async findAll(): Promise<Omit<User, 'password'>[]> {
+    const users = await this.userModel.find().select('-password').exec();
+    return users;
+  }
+
+  async findByEmail(email: string): Promise<Omit<User, 'password'>> {
+    const user = await this.userModel
+      .findOne({ email })
+      .select('-password')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found`);
+    }
+
+    return user;
+  }
+
+  async getUserCount(): Promise<number> {
+    return this.userModel.countDocuments().exec();
+  }
 }
