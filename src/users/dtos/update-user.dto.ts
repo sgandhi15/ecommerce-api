@@ -1,33 +1,33 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../schemas/user.schema';
 import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
+  IsOptional,
   MinLength,
-  Matches,
   MaxLength,
+  IsEmail,
+  IsString,
+  Matches,
 } from 'class-validator';
 
-export class CreateUserDto {
+export class UpdateUserDto {
   @ApiProperty({
     description: 'The name of the user',
     minLength: 3,
     maxLength: 20,
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(3)
   @MaxLength(20)
-  name: string;
+  name?: string;
 
   @ApiProperty({
     description: 'The email of the user',
     format: 'email',
   })
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
 
   @ApiProperty({
     description: 'The password of the user',
@@ -36,7 +36,7 @@ export class CreateUserDto {
     format: 'password',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(8)
   @MaxLength(20)
   @Matches(
@@ -46,7 +46,7 @@ export class CreateUserDto {
         'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
     },
   )
-  password: string;
+  password?: string;
 
   @ApiProperty({
     description: 'The role of the user',
