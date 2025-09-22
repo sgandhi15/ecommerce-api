@@ -4,6 +4,7 @@ import {
   Body,
   Get,
   Param,
+  Query,
   BadRequestException,
   Put,
   Delete,
@@ -12,7 +13,6 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { Types } from 'mongoose';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { GetUserByEmailDto } from './dtos/get-users.dto';
 
 @Controller('users')
 export class UsersController {
@@ -24,8 +24,11 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    const pageNum = Math.max(Number(page) || 1, 1);
+    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 100);
+
+    return this.usersService.findAll(pageNum, limitNum);
   }
 
   @Get('count')
@@ -34,8 +37,8 @@ export class UsersController {
   }
 
   @Get('email/:email')
-  findByEmail(@Param('email') email: GetUserByEmailDto) {
-    return this.usersService.findByEmail(email.email);
+  findByEmail(@Param('email') email: string) {
+    return this.usersService.findByEmail(email);
   }
 
   @Get(':id')
@@ -55,7 +58,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  remove(@Param('id') id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid user ID format');
     }

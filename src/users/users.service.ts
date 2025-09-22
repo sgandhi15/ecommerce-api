@@ -52,9 +52,40 @@ export class UsersService {
     return user;
   }
 
-  async findAll(): Promise<Omit<User, 'password'>[]> {
-    const users = await this.userModel.find().select('-password').exec();
-    return users;
+  async findAll(
+    page: number,
+    limit: number,
+  ): Promise<{
+    users: Omit<User, 'password'>[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalUsers: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      limit: number;
+    };
+  }> {
+    const skip = (page - 1) * limit;
+
+    const [users, totalUsers] = await Promise.all([
+      this.userModel.find().select('-password').skip(skip).limit(limit).exec(),
+      this.userModel.countDocuments().exec(),
+    ]);
+
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    return {
+      users,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalUsers,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        limit,
+      },
+    };
   }
 
   async findByEmail(email: string): Promise<Omit<User, 'password'>> {
