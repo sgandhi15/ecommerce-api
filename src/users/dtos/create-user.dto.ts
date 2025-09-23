@@ -7,6 +7,8 @@ import {
   MinLength,
   Matches,
   MaxLength,
+  IsEnum,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -51,6 +53,12 @@ export class CreateUserDto {
   @ApiProperty({
     description: 'The role of the user',
     enum: UserRole,
+    default: UserRole.USER,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(UserRole, {
+    message: 'Role must be either "user" or "admin"',
   })
   role?: UserRole;
 }

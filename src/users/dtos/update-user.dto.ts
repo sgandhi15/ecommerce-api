@@ -7,6 +7,7 @@ import {
   IsEmail,
   IsString,
   Matches,
+  IsEnum,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -51,6 +52,11 @@ export class UpdateUserDto {
   @ApiProperty({
     description: 'The role of the user',
     enum: UserRole,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(UserRole, {
+    message: 'Role must be either "user" or "admin"',
   })
   role?: UserRole;
 }
