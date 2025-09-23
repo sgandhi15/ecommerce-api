@@ -41,7 +41,6 @@ export class CartsController {
   ) {
     const userId = req.user.sub;
 
-    // Validate ObjectId format
     if (!Types.ObjectId.isValid(addToCartDto.productId)) {
       throw new BadRequestException('Invalid product ID format');
     }
@@ -59,7 +58,6 @@ export class CartsController {
   ) {
     const userId = req.user.sub;
 
-    // Validate ObjectId format
     if (!Types.ObjectId.isValid(productId)) {
       throw new BadRequestException('Invalid product ID format');
     }
@@ -80,7 +78,6 @@ export class CartsController {
   ) {
     const userId = req.user.sub;
 
-    // Validate ObjectId format
     if (!Types.ObjectId.isValid(productId)) {
       throw new BadRequestException('Invalid product ID format');
     }

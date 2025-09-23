@@ -6,8 +6,8 @@
 4. Swagger -- done
 5. Database design -- done
 6. Auth and User module -- done
-7. Carts module
-8. Product module
+7. Carts module -- done
+8. Product module -- done
 9. Order module
 
 ---
