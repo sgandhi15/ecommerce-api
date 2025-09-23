@@ -30,7 +30,6 @@ export class ProductsService {
       limit: number;
     };
   }> {
-    //TODO: Add pagination and filtering functionality
     const skip = (page - 1) * limit;
 
     const [products, totalProducts] = await Promise.all([
