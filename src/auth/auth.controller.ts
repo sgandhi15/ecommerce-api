@@ -4,8 +4,11 @@ import { LoginDto } from './dtos/login.dto';
 import { ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from './auth.guard';
 
-interface AuthenticatedRequest extends Request {
-  user: any;
+export interface AuthenticatedRequest extends Request {
+  user: {
+    sub: string;
+    role: string;
+  };
 }
 
 @Controller('auth')
