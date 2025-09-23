@@ -1,4 +1,26 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dtos/login.dto';
+import { ApiOperation } from '@nestjs/swagger';
+import { AuthGuard } from './auth.guard';
+
+interface AuthenticatedRequest extends Request {
+  user: any;
+}
 
 @Controller('auth')
-export class AuthController {}
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @ApiOperation({ summary: 'Login a user' })
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.signIn(loginDto.email, loginDto.password);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('profile')
+  async profile(@Req() req: AuthenticatedRequest) {
+    return req.user;
+  }
+}
