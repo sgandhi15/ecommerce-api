@@ -4,16 +4,16 @@ import { Item, ItemSchema } from './item.schema';
 
 export type CartDocument = HydratedDocument<Cart>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Cart {
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   userId: string;
 
-  @Prop({ required: true, type: [ItemSchema] })
+  @Prop({ default: [], type: [ItemSchema] })
   items: Item[];
 
-  @Prop({ required: true })
-  createdAt: Date;
+  @Prop({ default: 0 })
+  totalAmount: number;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
