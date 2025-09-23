@@ -88,11 +88,8 @@ export class UsersService {
     };
   }
 
-  async findByEmail(email: string): Promise<Omit<User, 'password'>> {
-    const user = await this.userModel
-      .findOne({ email })
-      .select('-password')
-      .exec();
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.userModel.findOne({ email }).exec();
 
     if (!user) {
       throw new NotFoundException(`User with email ${email} not found`);
