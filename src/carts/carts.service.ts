@@ -20,7 +20,7 @@ export class CartsService {
   ) {}
 
   async getUserCart(userEmail: string): Promise<CartDocument> {
-    const user = await this.usersService.findByEmail(userEmail);
+    const user = await this.usersService.findByEmailWithId(userEmail);
 
     let cart = await this.cartModel.findOne({ userId: user._id }).exec();
 

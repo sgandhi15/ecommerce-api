@@ -101,6 +101,16 @@ export class UsersService {
     return user;
   }
 
+  async findByEmailWithId(email: string): Promise<UserDocument> {
+    const user = await this.userModel.findOne({ email }).exec();
+
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found`);
+    }
+
+    return user;
+  }
+
   async getUserCount(): Promise<number> {
     return this.userModel.countDocuments().exec();
   }

@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { OnEvent } from '@nestjs/event-emitter';
 import { HydratedDocument, Model } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { UpdateProductDto } from './dtos/update-product.dto';
+import { OrderCreatedEvent } from '../orders/events/order-created.event';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
@@ -83,5 +87,42 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
     await this.productModel.findByIdAndDelete(id).exec();
+  }
+
+  @OnEvent('order.created')
+  async handleOrderCreated(event: OrderCreatedEvent): Promise<void> {
+    this.logger.log(`Processing order ${event.orderNumber} for stock updates`);
+
+    try {
+      for (const item of event.items) {
+        const product = await this.productModel.findById(item.productId);
+
+        if (product) {
+          if (product.stock >= item.quantity) {
+            product.stock -= item.quantity;
+            await product.save();
+
+            this.logger.log(
+              `Updated stock for product ${item.productId}: ${product.stock + item.quantity} -> ${product.stock}`,
+            );
+          } else {
+            this.logger.error(
+              `Insufficient stock for product ${item.productId}. Available: ${product.stock}, Required: ${item.quantity}`,
+            );
+          }
+        } else {
+          this.logger.error(
+            `Product ${item.productId} not found during stock update`,
+          );
+        }
+      }
+
+      this.logger.log(`Stock updates completed for order ${event.orderNumber}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to update stock for order ${event.orderNumber}:`,
+        error,
+      );
+    }
   }
 }
