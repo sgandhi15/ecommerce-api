@@ -151,4 +151,96 @@ export class OrdersService {
       }
     }
   }
+
+  async getUserOrders(
+    userEmail: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    orders: OrderDocument[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalOrders: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      limit: number;
+    };
+  }> {
+    const skip = (page - 1) * limit;
+
+    const user = await this.usersService.findByEmailWithId(userEmail);
+    console.log(
+      `[DEBUG] Getting orders for user: ${userEmail} (ID: ${user._id})`,
+    );
+
+    const [orders, totalOrders] = await Promise.all([
+      this.orderModel
+        .find({ userId: user._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.orderModel.countDocuments({ userId: user._id }).exec(),
+    ]);
+
+    console.log(
+      `[DEBUG] Found ${totalOrders} total orders for user, returning ${orders.length} orders`,
+    );
+
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    return {
+      orders,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalOrders,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        limit,
+      },
+    };
+  }
+
+  async getOrderById(
+    orderId: string,
+    userEmail: string,
+  ): Promise<OrderDocument> {
+    console.log(
+      `[DEBUG] Looking for order ID: ${orderId} for user: ${userEmail}`,
+    );
+
+    const order = await this.orderModel.findById(orderId).exec();
+
+    if (!order) {
+      console.log(`[DEBUG] Order not found in database: ${orderId}`);
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    console.log(
+      `[DEBUG] Found order with userId: ${order.userId} (type: ${typeof order.userId})`,
+    );
+
+    // Ensure user can only access their own orders
+    const user = await this.usersService.findByEmailWithId(userEmail);
+    console.log(`[DEBUG] User _id: ${user._id} (type: ${typeof user._id})`);
+
+    // Convert both to strings for proper comparison
+    const orderUserIdStr = order.userId.toString();
+    const userIdStr = user._id.toString();
+    console.log(
+      `[DEBUG] Comparing orderUserId: "${orderUserIdStr}" with userId: "${userIdStr}"`,
+    );
+
+    if (orderUserIdStr !== userIdStr) {
+      console.log(
+        `[DEBUG] User authorization failed - order belongs to different user`,
+      );
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    console.log(`[DEBUG] Order access authorized for user: ${userEmail}`);
+    return order;
+  }
 }

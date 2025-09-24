@@ -1,10 +1,24 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  BadRequestException,
+  Param,
+  Get,
+  Query,
+} from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreateOrderDto } from './dtos/create-order.dto';
-import { OrderResponseDto } from './dtos/order-response.dto';
+import {
+  OrderResponseDto,
+  OrderListResponseDto,
+} from './dtos/order-response.dto';
 import type { AuthenticatedRequest } from '../auth/auth.controller';
+import { Types } from 'mongoose';
 
 @ApiTags('orders')
 @UseGuards(AuthGuard)
@@ -23,6 +37,59 @@ export class OrdersController {
       userEmail,
       createOrderDto,
     );
+    return order.toObject() as unknown as OrderResponseDto;
+  }
+
+  @ApiOperation({ summary: 'Get current user orders' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
+  @Get()
+  async getUserOrders(
+    @Req() req: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<OrderListResponseDto> {
+    const userEmail = req.user.sub;
+    const pageNum = Math.max(Number(page) || 1, 1);
+    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 50); // Max 50 items per page
+
+    const result = await this.ordersService.getUserOrders(
+      userEmail,
+      pageNum,
+      limitNum,
+    );
+
+    return {
+      orders: result.orders.map((order) =>
+        order.toObject(),
+      ) as unknown as OrderResponseDto[],
+      pagination: result.pagination,
+    };
+  }
+
+  @ApiOperation({ summary: 'Get order by ID' })
+  @Get(':id')
+  async getOrderById(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderResponseDto> {
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid order ID format');
+    }
+
+    const userEmail = req.user.sub;
+    const order = await this.ordersService.getOrderById(id, userEmail);
     return order.toObject() as unknown as OrderResponseDto;
   }
 }
