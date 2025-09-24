@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderItem } from '../schemas/order-item.schema';
 import { ShippingAddress } from '../schemas/shipping-address.schema';
-import { OrderStatus, PaymentStatus } from '../schemas/order.schema';
+import { OrderStatus } from '../schemas/order.schema';
 
 export class OrderResponseDto {
   @ApiProperty({ description: 'Order ID', example: '507f1f77bcf86cd799439011' })
@@ -24,9 +24,6 @@ export class OrderResponseDto {
 
   @ApiProperty({ description: 'Order status', enum: OrderStatus })
   status: OrderStatus;
-
-  @ApiProperty({ description: 'Payment status', enum: PaymentStatus })
-  paymentStatus: PaymentStatus;
 
   @ApiProperty({ description: 'Shipping address', type: ShippingAddress })
   shippingAddress: ShippingAddress;
