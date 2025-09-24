@@ -1,10 +1,9 @@
-// For E2E tests, you'll use a library like supertest to make real HTTP requests to your running application, which should be connected to a separate test database.
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
+import { getAdminUser, getUserToken } from './helpers/auth-helper';
 
 describe('Full Authentication Flow', () => {
   let app: INestApplication<App>;
@@ -19,28 +18,21 @@ describe('Full Authentication Flow', () => {
   });
 
   it('should be able to register, log in, and access a protected route', async () => {
-    const timestamp = Date.now();
-    const newUser = {
-      email: `test-user-${timestamp}@example.com`,
-      password: 'TestPass123!',
-      name: `Test User ${timestamp}`,
-      role: 'admin',
-    };
+    const newUser = getAdminUser();
 
     const response = await request(app.getHttpServer())
       .post('/users')
       .send(newUser);
     expect(response.status).toBe(201);
 
-    const loginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: newUser.email,
-        password: newUser.password,
-      });
-    expect(loginResponse.status).toBe(201);
+    const loginResponse = await getUserToken(
+      app,
+      newUser.email,
+      newUser.password,
+    );
+    expect(loginResponse).toBeDefined();
 
-    const token = loginResponse.body.access_token;
+    const token = loginResponse;
     const profileResponse = await request(app.getHttpServer())
       .get('/auth/profile')
       .set('Authorization', `Bearer ${token}`);
