@@ -83,7 +83,6 @@ export class OrdersController {
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
   ): Promise<OrderResponseDto> {
-    // Validate ObjectId format
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid order ID format');
     }

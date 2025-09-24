@@ -8,7 +8,12 @@
 6. Auth and User module -- done
 7. Carts module -- done
 8. Product module -- done
-9. Order module
+9. Order module -- done
+10. test -- done
+11. cleanup -- done
+12. docker-compose changes -- done
+13. documentation -- done
+14. video demo -- done
 
 ---
 
