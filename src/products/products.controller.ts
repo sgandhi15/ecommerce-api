@@ -16,7 +16,7 @@ import {
 import { CreateProductDto } from './dtos/create-product.dto';
 import { ProductsService } from './products.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from 'src/auth/auth.controller';
 import { UserRole } from 'src/users/schemas/user.schema';
 import { UpdateProductDto } from './dtos/update-product.dto';
@@ -27,6 +27,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @ApiOperation({ summary: 'Create a product' })
+  @ApiBody({ type: CreateProductDto })
   @UseGuards(AuthGuard)
   @Post()
   create(
@@ -45,6 +46,18 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: 'Get all products' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
   @Get()
   findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     const pageNum = Math.max(Number(page) || 1, 1);
@@ -60,6 +73,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.productsService.findById(id);
@@ -67,6 +81,7 @@ export class ProductsController {
 
   @ApiOperation({ summary: 'Update a product by ID' })
   @UseGuards(AuthGuard)
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @Put(':id')
   update(
     @Param('id') id: string,
@@ -89,6 +104,7 @@ export class ProductsController {
 
   @ApiOperation({ summary: 'Delete a product by ID' })
   @UseGuards(AuthGuard)
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @Delete(':id')
   async delete(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     if (!Types.ObjectId.isValid(id)) {

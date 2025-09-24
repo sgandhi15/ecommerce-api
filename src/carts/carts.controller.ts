@@ -10,13 +10,18 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { CartsService } from './carts.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AddToCartDto } from './dtos/add-to-cart.dto';
 import { UpdateCartItemDto } from './dtos/update-cart.dto';
-import { CartResponseDto } from './dtos/create-cart.dto';
 import type { AuthenticatedRequest } from 'src/auth/auth.controller';
 
 @ApiTags('cart')
@@ -26,6 +31,7 @@ export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
   @ApiOperation({ summary: 'Get current user cart' })
+  @ApiResponse({ status: 200, description: 'User cart' })
   @Get()
   async getUserCart(@Req() req: AuthenticatedRequest) {
     const userEmail = req.user.sub;
@@ -34,6 +40,8 @@ export class CartsController {
   }
 
   @ApiOperation({ summary: 'Add product to cart' })
+  @ApiResponse({ status: 200, description: 'Product added to cart' })
+  @ApiBody({ type: AddToCartDto })
   @Post('items')
   async addItem(
     @Body() addToCartDto: AddToCartDto,
@@ -50,6 +58,8 @@ export class CartsController {
   }
 
   @ApiOperation({ summary: 'Update product quantity in cart' })
+  @ApiResponse({ status: 200, description: 'Product quantity updated' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
   @Patch('items/:productId')
   async updateItemQuantity(
     @Param('productId') productId: string,
@@ -71,6 +81,8 @@ export class CartsController {
   }
 
   @ApiOperation({ summary: 'Remove product from cart' })
+  @ApiResponse({ status: 200, description: 'Product removed from cart' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
   @Delete('items/:productId')
   async removeItem(
     @Param('productId') productId: string,
@@ -87,6 +99,8 @@ export class CartsController {
   }
 
   @ApiOperation({ summary: 'Clear cart' })
+  @ApiResponse({ status: 200, description: 'Cart cleared' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
   @Delete()
   async clearCart(@Req() req: AuthenticatedRequest) {
     const userId = req.user.sub;
