@@ -32,5 +32,5 @@ And here is the initial db design
 
 ---
 
-And instead of me telling you what I did, I will show you the video demo
+And instead of me making you read through the code and you trying to understand what I did for each feature, I will show you the video demo
 ![Video Demo](./docs/video-demo.mp4)
