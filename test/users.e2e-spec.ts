@@ -1,7 +1,3 @@
-// E2E User Management Tests
-// Testing user registration, authentication, CRUD operations, and validation
-// Covers the complete user lifecycle from registration to deletion
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
 import { INestApplication } from '@nestjs/common';
@@ -30,29 +26,23 @@ describe('User Management E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Setup test users for operations that require existing users
     adminUser = getAdminUser();
     normalUser = getNormalUser();
 
-    // Create admin user for admin operations
     const adminResult = await createUserAndGetToken(app, adminUser);
     adminToken = adminResult.token;
     createdUserIds.push(adminResult.user._id);
 
-    // Create normal user for regular operations
     const userResult = await createUserAndGetToken(app, normalUser);
     userToken = userResult.token;
     createdUserIds.push(userResult.user._id);
   });
 
   afterAll(async () => {
-    // Cleanup created users
     for (const userId of createdUserIds) {
       try {
         await request(app.getHttpServer()).delete(`/users/${userId}`);
-      } catch (error) {
-        // Ignore cleanup errors
-      }
+      } catch (error) {}
     }
 
     await app.close();
@@ -76,13 +66,12 @@ describe('User Management E2E', () => {
       expect(response.body.email).toBe(testUser.email);
       expect(response.body.name).toBe(testUser.name);
       expect(response.body.role).toBe(testUser.role);
-      expect(response.body.password).toBeUndefined(); // Password should not be returned
+      expect(response.body.password).toBeUndefined();
 
       createdUserIds.push(response.body._id);
     });
 
     it('should login and access protected profile route', async () => {
-      // Create a fresh user for this test
       const testUser = {
         name: 'Login Test User',
         email: `login-test-${Date.now()}@example.com`,
@@ -90,7 +79,6 @@ describe('User Management E2E', () => {
         role: 'user',
       };
 
-      // Register user
       const regResponse = await request(app.getHttpServer())
         .post('/users')
         .send(testUser)
@@ -98,11 +86,9 @@ describe('User Management E2E', () => {
 
       createdUserIds.push(regResponse.body._id);
 
-      // Login and get token
       const token = await getUserToken(app, testUser.email, testUser.password);
       expect(token).toBeDefined();
 
-      // Access protected profile route
       const profileResponse = await request(app.getHttpServer())
         .get('/auth/profile')
         .set('Authorization', `Bearer ${token}`)
@@ -137,7 +123,6 @@ describe('User Management E2E', () => {
     let testUserId: string;
 
     beforeAll(async () => {
-      // Create a user for CRUD operations
       const testUser = {
         name: 'CRUD Test User',
         email: `crud-test-${Date.now()}@example.com`,
@@ -211,7 +196,6 @@ describe('User Management E2E', () => {
     });
 
     it('should delete user', async () => {
-      // Create a user specifically for deletion
       const deleteUser = {
         name: 'Delete Test User',
         email: `delete-test-${Date.now()}@example.com`,
@@ -226,12 +210,10 @@ describe('User Management E2E', () => {
 
       const deleteUserId = createResponse.body._id;
 
-      // Delete the user
       await request(app.getHttpServer())
         .delete(`/users/${deleteUserId}`)
         .expect(200);
 
-      // Verify user is deleted
       await request(app.getHttpServer())
         .get(`/users/${deleteUserId}`)
         .expect(404);
@@ -242,7 +224,7 @@ describe('User Management E2E', () => {
     it('should reject registration with duplicate email', async () => {
       const duplicateUser = {
         name: 'Duplicate User',
-        email: adminUser.email, // Use existing email
+        email: adminUser.email,
         password: 'DuplicateTest123!',
         role: 'user',
       };
@@ -261,7 +243,7 @@ describe('User Management E2E', () => {
       const invalidPasswordUser = {
         name: 'Invalid Password User',
         email: `invalid-pwd-${Date.now()}@example.com`,
-        password: 'weak', // Doesn't meet complexity requirements
+        password: 'weak',
         role: 'user',
       };
 
@@ -315,7 +297,7 @@ describe('User Management E2E', () => {
     });
 
     it('should reject operations on non-existent user', async () => {
-      const nonExistentId = '507f1f77bcf86cd799439011'; // Valid ObjectId format but doesn't exist
+      const nonExistentId = '507f1f77bcf86cd799439011';
 
       await request(app.getHttpServer())
         .get(`/users/${nonExistentId}`)
@@ -332,7 +314,6 @@ describe('User Management E2E', () => {
     });
 
     it('should reject update with duplicate email', async () => {
-      // Create two users
       const user1 = {
         name: 'User One',
         email: `user1-${Date.now()}@example.com`,
@@ -359,7 +340,6 @@ describe('User Management E2E', () => {
 
       createdUserIds.push(response1.body._id, response2.body._id);
 
-      // Try to update user2 with user1's email
       const updateResponse = await request(app.getHttpServer())
         .put(`/users/${response2.body._id}`)
         .send({ email: user1.email })
@@ -387,16 +367,13 @@ describe('User Management E2E', () => {
 
       createdUserIds.push(response.body._id);
 
-      // Password should not be returned in response
       expect(response.body.password).toBeUndefined();
 
-      // Should be able to login with original password
       const token = await getUserToken(app, testUser.email, testUser.password);
       expect(token).toBeDefined();
     });
 
     it('should update password securely', async () => {
-      // Create user
       const testUser = {
         name: 'Password Update User',
         email: `pwd-update-${Date.now()}@example.com`,
@@ -411,14 +388,12 @@ describe('User Management E2E', () => {
 
       createdUserIds.push(createResponse.body._id);
 
-      // Update password
       const newPassword = 'NewPassword123!';
       await request(app.getHttpServer())
         .put(`/users/${createResponse.body._id}`)
         .send({ password: newPassword })
         .expect(200);
 
-      // Should not be able to login with old password
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({
@@ -427,7 +402,6 @@ describe('User Management E2E', () => {
         })
         .expect(401);
 
-      // Should be able to login with new password
       const token = await getUserToken(app, testUser.email, newPassword);
       expect(token).toBeDefined();
     });
@@ -470,7 +444,6 @@ describe('User Management E2E', () => {
         name: 'Default Role User',
         email: `default-role-${Date.now()}@example.com`,
         password: 'DefaultRole123!',
-        // role not specified
       };
 
       const response = await request(app.getHttpServer())
@@ -483,7 +456,6 @@ describe('User Management E2E', () => {
     });
 
     it('should update user role', async () => {
-      // Create regular user
       const testUser = {
         name: 'Role Update User',
         email: `role-update-${Date.now()}@example.com`,
@@ -498,7 +470,6 @@ describe('User Management E2E', () => {
 
       createdUserIds.push(createResponse.body._id);
 
-      // Update to admin role
       const updateResponse = await request(app.getHttpServer())
         .put(`/users/${createResponse.body._id}`)
         .send({ role: 'admin' })
