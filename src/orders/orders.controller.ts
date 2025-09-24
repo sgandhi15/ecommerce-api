@@ -61,7 +61,7 @@ export class OrdersController {
   ): Promise<OrderListResponseDto> {
     const userEmail = req.user.sub;
     const pageNum = Math.max(Number(page) || 1, 1);
-    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 50); // Max 50 items per page
+    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
     const result = await this.ordersService.getUserOrders(
       userEmail,
