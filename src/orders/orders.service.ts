@@ -60,7 +60,6 @@ export class OrdersService {
         await session.endSession();
       }
     } else {
-      console.log('[INFO] Running without transactions (standalone MongoDB)');
       return await operation();
     }
   }
@@ -105,16 +104,10 @@ export class OrdersService {
         shippingAddress: createOrderDto.shippingAddress,
       });
 
-      // Save order with session if available
       const savedOrder = session
         ? await order.save({ session })
         : await order.save();
 
-      console.log(
-        `[INFO] Order created: ${savedOrder._id} for user: ${userEmail}`,
-      );
-
-      // Clear user's cart
       await this.cartsService.clearCart(userEmail);
 
       // Emit order created event for stock management
@@ -170,9 +163,6 @@ export class OrdersService {
     const skip = (page - 1) * limit;
 
     const user = await this.usersService.findByEmailWithId(userEmail);
-    console.log(
-      `[DEBUG] Getting orders for user: ${userEmail} (ID: ${user._id})`,
-    );
 
     const [orders, totalOrders] = await Promise.all([
       this.orderModel
@@ -183,10 +173,6 @@ export class OrdersService {
         .exec(),
       this.orderModel.countDocuments({ userId: user._id }).exec(),
     ]);
-
-    console.log(
-      `[DEBUG] Found ${totalOrders} total orders for user, returning ${orders.length} orders`,
-    );
 
     const totalPages = Math.ceil(totalOrders / limit);
 
@@ -207,40 +193,22 @@ export class OrdersService {
     orderId: string,
     userEmail: string,
   ): Promise<OrderDocument> {
-    console.log(
-      `[DEBUG] Looking for order ID: ${orderId} for user: ${userEmail}`,
-    );
-
     const order = await this.orderModel.findById(orderId).exec();
 
     if (!order) {
-      console.log(`[DEBUG] Order not found in database: ${orderId}`);
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
-
-    console.log(
-      `[DEBUG] Found order with userId: ${order.userId} (type: ${typeof order.userId})`,
-    );
 
     // Ensure user can only access their own orders
     const user = await this.usersService.findByEmailWithId(userEmail);
-    console.log(`[DEBUG] User _id: ${user._id} (type: ${typeof user._id})`);
 
-    // Convert both to strings for proper comparison
     const orderUserIdStr = order.userId.toString();
     const userIdStr = user._id.toString();
-    console.log(
-      `[DEBUG] Comparing orderUserId: "${orderUserIdStr}" with userId: "${userIdStr}"`,
-    );
 
     if (orderUserIdStr !== userIdStr) {
-      console.log(
-        `[DEBUG] User authorization failed - order belongs to different user`,
-      );
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    console.log(`[DEBUG] Order access authorized for user: ${userEmail}`);
     return order;
   }
 }
