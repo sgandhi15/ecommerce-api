@@ -1,24 +1,36 @@
-## To-dos
+## Project Setup
 
-1. Dockerize app -- done
-2. Docker-compose file -- done
-3. Environment variables -- done
-4. Swagger -- done
-5. Database design -- done
-6. Auth and User module -- done
-7. Carts module -- done
-8. Product module -- done
-9. Order module -- done
-10. test -- done
-11. cleanup -- done
-12. docker-compose changes -- done
-13. documentation -- done
-14. video demo -- done
+1. Clone the repository
+2. copy .env.example to .env and you dont need to change anything
+3. run `docker-compose up -d` to start the containers
+4. Navigate to `http://localhost:8081` to access the mongo express admin panel
+5. Navigate to `http://localhost:3000/api` to access the swagger documentation
+
+## Things I did
+
+1. Used mongodb as the database
+   - used mongoose as the odm
+2. simple git workflow
+   - used branches by feature like `feature/auth`, `feature/docker`
+3. Wrote 2 e2e tests
+   - user auth flow e2e test
+   - order creation flow e2e test
+4. Project specifications
+   1. Dockerized the app
+   2. Docker-compose file
+   3. Environment variables
+   4. Swagger documentation
+   5. Auth and User module
+   6. Carts module
+   7. Products module
+   8. Orders module
 
 ---
 
+And here is the initial db design
 ![Initial DB Design](./docs/initial-db-design.png)
 
-### Futher Enhancements
+---
 
-1. In product schema, add a category field
+And instead of me making you read through the code and you trying to understand what I did for each feature, I will show you the video demo
+![Video Demo](./docs/video-demo.mp4)

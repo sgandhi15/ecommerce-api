@@ -93,19 +93,15 @@ export const createOrder = async (
   return response.body;
 };
 
-// Additional helper functions for comprehensive testing
-
 export const createUserAndGetToken = async (
   app: INestApplication<App>,
   userData: any,
 ) => {
-  // Create user
   const userResponse = await request(app.getHttpServer())
     .post('/users')
     .send(userData)
     .expect(201);
 
-  // Get token
   const token = await getUserToken(app, userData.email, userData.password);
 
   return { user: userResponse.body, token };
@@ -130,10 +126,8 @@ export const getProduct = async (
 };
 
 export const clearCart = async (app: INestApplication<App>, token: string) => {
-  // Get current cart
   const cart = await getCart(app, token);
 
-  // Remove all items
   for (const item of cart.items || []) {
     await request(app.getHttpServer())
       .delete(`/cart/items/${item.productId}`)

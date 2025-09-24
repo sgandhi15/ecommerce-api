@@ -9,8 +9,9 @@ import {
   Get,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
+import { ApiParam } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import {
@@ -27,6 +28,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @ApiOperation({ summary: 'Create a new order from cart' })
+  @ApiBody({ type: CreateOrderDto })
   @Post()
   async createOrder(
     @Body() createOrderDto: CreateOrderDto,
@@ -61,7 +63,7 @@ export class OrdersController {
   ): Promise<OrderListResponseDto> {
     const userEmail = req.user.sub;
     const pageNum = Math.max(Number(page) || 1, 1);
-    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 50); // Max 50 items per page
+    const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
     const result = await this.ordersService.getUserOrders(
       userEmail,
@@ -78,6 +80,7 @@ export class OrdersController {
   }
 
   @ApiOperation({ summary: 'Get order by ID' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @Get(':id')
   async getOrderById(
     @Param('id') id: string,

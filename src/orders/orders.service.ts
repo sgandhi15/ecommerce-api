@@ -33,7 +33,6 @@ export class OrdersService {
     return `ORD-${year}${month}${day}-${timestamp}`;
   }
 
-  // Check if MongoDB instance supports transactions
   private async supportsTransactions(): Promise<boolean> {
     try {
       if (!this.connection.db) {
@@ -73,7 +72,6 @@ export class OrdersService {
     }
 
     return await this.executeWithTransaction(async (session) => {
-      // Get user's cart and user details
       const [cart, user] = await Promise.all([
         this.cartsService.getUserCart(userEmail),
         this.usersService.findByEmailWithId(userEmail),
@@ -83,10 +81,8 @@ export class OrdersService {
         throw new BadRequestException('Cart is empty');
       }
 
-      // Validate all products exist and have sufficient stock
       await this.validateCartAndStock(cart.items);
 
-      // Create order document
       const orderNumber = this.generateOrderNumber();
 
       const order = new this.orderModel({
@@ -110,7 +106,6 @@ export class OrdersService {
 
       await this.cartsService.clearCart(userEmail);
 
-      // Emit order created event for stock management
       this.eventEmitter.emit(
         'order.created',
         new OrderCreatedEvent(
@@ -199,7 +194,6 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    // Ensure user can only access their own orders
     const user = await this.usersService.findByEmailWithId(userEmail);
 
     const orderUserIdStr = order.userId.toString();
