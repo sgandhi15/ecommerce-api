@@ -2,7 +2,7 @@
 
 1. Clone the repository
 2. copy .env.example to .env and you dont need to change anything
-3. run `docker-compose up -d` to start the containers
+3. run `docker compose up -d` to start the containers
 4. Navigate to `http://localhost:8081` to access the mongo express admin panel
 5. Navigate to `http://localhost:3000/api` to access the swagger documentation
 
@@ -27,10 +27,12 @@
 
 ---
 
-And here is the initial db design
+## And here is the initial db design
+
 ![Initial DB Design](./docs/initial-db-design.png)
 
 ---
 
-And instead of me making you read through the code and you trying to understand what I did for each feature, I will show you the video demo
-![Video Demo](./docs/video-demo.mp4)
+## And instead of me making you read through the code and you trying to understand what I did for each feature, I will show you the video demo
+
+![Video Demo](./docs/demo-video.mkv)
