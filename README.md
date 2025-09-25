@@ -35,4 +35,6 @@
 
 ## And instead of me making you read through the code and you trying to understand what I did for each feature, I will show you the video demo
 
-![Video Demo](./docs/demo-video.mkv)
+[![!Video Demo](./docs/sc.png)](https://www.youtube.com/watch?v=XNixd1viBdc)
+
+click the image to watch the video
