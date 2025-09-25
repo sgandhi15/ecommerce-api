@@ -5,14 +5,23 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { OnEvent } from '@nestjs/event-emitter';
 import { User, UserDocument, UserRole } from './schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import {
+  UserLookupRequestEvent,
+  UserLookupResponseEvent,
+} from './events/user-lookup.event';
+import { RequestResponseService } from '../events/request-response.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private requestResponseService: RequestResponseService,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
     const existingUser = await this.userModel.findOne({
@@ -161,5 +170,41 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
     await this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  @OnEvent('user.lookup.request')
+  async handleUserLookupRequest(
+    event: UserLookupRequestEvent & { requestId: string },
+  ): Promise<void> {
+    try {
+      const user = await this.userModel.findOne({ email: event.email }).exec();
+
+      const response = new UserLookupResponseEvent(
+        event.requestId,
+        user
+          ? {
+              _id: user._id.toString(),
+              email: user.email,
+              name: user.name,
+            }
+          : null,
+      );
+
+      this.requestResponseService.handleResponse(
+        'user.lookup.response',
+        response,
+      );
+    } catch (error) {
+      const response = new UserLookupResponseEvent(
+        event.requestId,
+        null,
+        error.message,
+      );
+
+      this.requestResponseService.handleResponse(
+        'user.lookup.response',
+        response,
+      );
+    }
   }
 }

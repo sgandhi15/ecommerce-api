@@ -7,21 +7,30 @@ import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Order, OrderDocument, OrderStatus } from './schemas/order.schema';
-import { CartsService } from '../carts/carts.service';
-import { ProductsService } from '../products/products.service';
-import { UsersService } from '../users/users.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import { OrderCreatedEvent } from './events/order-created.event';
+import { RequestResponseService } from '../events/request-response.service';
+import {
+  UserLookupRequestEvent,
+  UserLookupResponseEvent,
+} from '../users/events/user-lookup.event';
+import {
+  CartLookupRequestEvent,
+  CartLookupResponseEvent,
+  CartClearRequestEvent,
+} from '../carts/events/cart.events';
+import {
+  StockValidationRequestEvent,
+  StockValidationResponseEvent,
+} from '../products/events/product.events';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectConnection() private readonly connection: Connection,
-    private readonly cartsService: CartsService,
-    private readonly productsService: ProductsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly usersService: UsersService,
+    private readonly requestResponseService: RequestResponseService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -72,16 +81,53 @@ export class OrdersService {
     }
 
     return await this.executeWithTransaction(async (session) => {
-      const [cart, user] = await Promise.all([
-        this.cartsService.getUserCart(userEmail),
-        this.usersService.findByEmailWithId(userEmail),
+      // Get user and cart via events
+      const [cartResponse, userResponse] = await Promise.all([
+        this.requestResponseService.sendRequest<CartLookupResponseEvent>(
+          new CartLookupRequestEvent(userEmail, ''),
+          'cart.lookup.response',
+        ),
+        this.requestResponseService.sendRequest<UserLookupResponseEvent>(
+          new UserLookupRequestEvent(userEmail, ''),
+          'user.lookup.response',
+        ),
       ]);
+
+      if (!cartResponse.cart) {
+        throw new BadRequestException('Cart not found');
+      }
+
+      if (!userResponse.user) {
+        throw new BadRequestException('User not found');
+      }
+
+      const cart = cartResponse.cart;
+      const user = userResponse.user;
 
       if (!cart.items || cart.items.length === 0) {
         throw new BadRequestException('Cart is empty');
       }
 
-      await this.validateCartAndStock(cart.items);
+      // Validate stock via events
+      const stockValidationResponse =
+        await this.requestResponseService.sendRequest<StockValidationResponseEvent>(
+          new StockValidationRequestEvent(
+            cart.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+            '',
+          ),
+          'stock.validation.response',
+        );
+
+      if (!stockValidationResponse.allValid) {
+        const errors = stockValidationResponse.validationResults
+          .filter((result) => !result.isValid)
+          .map((result) => result.error)
+          .join(', ');
+        throw new BadRequestException(`Stock validation failed: ${errors}`);
+      }
 
       const orderNumber = this.generateOrderNumber();
 
@@ -104,7 +150,11 @@ export class OrdersService {
         ? await order.save({ session })
         : await order.save();
 
-      await this.cartsService.clearCart(userEmail);
+      // Clear cart via events
+      await this.requestResponseService.sendRequest(
+        new CartClearRequestEvent(userEmail, ''),
+        'cart.clear.response',
+      );
 
       this.eventEmitter.emit(
         'order.created',
@@ -125,21 +175,6 @@ export class OrdersService {
     });
   }
 
-  private async validateCartAndStock(cartItems: any[]): Promise<void> {
-    for (const item of cartItems) {
-      const product = await this.productsService.findById(item.productId);
-      if (!product) {
-        throw new NotFoundException(`Product ${item.productId} not found`);
-      }
-
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-        );
-      }
-    }
-  }
-
   async getUserOrders(
     userEmail: string,
     page: number = 1,
@@ -157,16 +192,25 @@ export class OrdersService {
   }> {
     const skip = (page - 1) * limit;
 
-    const user = await this.usersService.findByEmailWithId(userEmail);
+    // Get user via events
+    const userResponse =
+      await this.requestResponseService.sendRequest<UserLookupResponseEvent>(
+        new UserLookupRequestEvent(userEmail, ''),
+        'user.lookup.response',
+      );
+
+    if (!userResponse.user) {
+      throw new NotFoundException('User not found');
+    }
 
     const [orders, totalOrders] = await Promise.all([
       this.orderModel
-        .find({ userId: user._id })
+        .find({ userId: userResponse.user._id })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.orderModel.countDocuments({ userId: user._id }).exec(),
+      this.orderModel.countDocuments({ userId: userResponse.user._id }).exec(),
     ]);
 
     const totalPages = Math.ceil(totalOrders / limit);
@@ -194,10 +238,19 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
-    const user = await this.usersService.findByEmailWithId(userEmail);
+    // Get user via events
+    const userResponse =
+      await this.requestResponseService.sendRequest<UserLookupResponseEvent>(
+        new UserLookupRequestEvent(userEmail, ''),
+        'user.lookup.response',
+      );
+
+    if (!userResponse.user) {
+      throw new NotFoundException('User not found');
+    }
 
     const orderUserIdStr = order.userId.toString();
-    const userIdStr = user._id.toString();
+    const userIdStr = userResponse.user._id.toString();
 
     if (orderUserIdStr !== userIdStr) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);

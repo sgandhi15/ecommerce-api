@@ -6,6 +6,13 @@ import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { UpdateProductDto } from './dtos/update-product.dto';
 import { OrderCreatedEvent } from '../orders/events/order-created.event';
+import {
+  ProductLookupRequestEvent,
+  ProductLookupResponseEvent,
+  StockValidationRequestEvent,
+  StockValidationResponseEvent,
+} from './events/product.events';
+import { RequestResponseService } from '../events/request-response.service';
 
 @Injectable()
 export class ProductsService {
@@ -13,6 +20,7 @@ export class ProductsService {
 
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    private requestResponseService: RequestResponseService,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -122,6 +130,109 @@ export class ProductsService {
       this.logger.error(
         `Failed to update stock for order ${event.orderNumber}:`,
         error,
+      );
+    }
+  }
+
+  @OnEvent('product.lookup.request')
+  async handleProductLookupRequest(
+    event: ProductLookupRequestEvent & { requestId: string },
+  ): Promise<void> {
+    try {
+      const product = await this.productModel.findById(event.productId).exec();
+
+      const response = new ProductLookupResponseEvent(
+        event.requestId,
+        product
+          ? {
+              _id: product._id.toString(),
+              name: product.name,
+              price: product.price,
+              stock: product.stock,
+            }
+          : null,
+      );
+
+      this.requestResponseService.handleResponse(
+        'product.lookup.response',
+        response,
+      );
+    } catch (error) {
+      const response = new ProductLookupResponseEvent(
+        event.requestId,
+        null,
+        error.message,
+      );
+
+      this.requestResponseService.handleResponse(
+        'product.lookup.response',
+        response,
+      );
+    }
+  }
+
+  @OnEvent('stock.validation.request')
+  async handleStockValidationRequest(
+    event: StockValidationRequestEvent & { requestId: string },
+  ): Promise<void> {
+    try {
+      const validationResults: Array<{
+        productId: string;
+        isValid: boolean;
+        availableStock: number;
+        requestedQuantity: number;
+        error?: string;
+      }> = [];
+      let allValid = true;
+
+      for (const item of event.items) {
+        const product = await this.productModel.findById(item.productId).exec();
+
+        if (!product) {
+          validationResults.push({
+            productId: item.productId,
+            isValid: false,
+            availableStock: 0,
+            requestedQuantity: item.quantity,
+            error: `Product ${item.productId} not found`,
+          });
+          allValid = false;
+        } else {
+          const isValid = product.stock >= item.quantity;
+          if (!isValid) allValid = false;
+
+          validationResults.push({
+            productId: item.productId,
+            isValid,
+            availableStock: product.stock,
+            requestedQuantity: item.quantity,
+            error: isValid
+              ? undefined
+              : `Insufficient stock. Available: ${product.stock}, Requested: ${item.quantity}`,
+          });
+        }
+      }
+
+      const response = new StockValidationResponseEvent(
+        event.requestId,
+        validationResults,
+        allValid,
+      );
+
+      this.requestResponseService.handleResponse(
+        'stock.validation.response',
+        response,
+      );
+    } catch (error) {
+      const response = new StockValidationResponseEvent(
+        event.requestId,
+        [],
+        false,
+      );
+
+      this.requestResponseService.handleResponse(
+        'stock.validation.response',
+        response,
       );
     }
   }

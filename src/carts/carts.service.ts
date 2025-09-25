@@ -5,28 +5,52 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { OnEvent } from '@nestjs/event-emitter';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
-import { ProductsService } from '../products/products.service';
 import { AddToCartDto } from './dtos/add-to-cart.dto';
-import { UsersService } from 'src/users/users.service';
+import {
+  CartLookupRequestEvent,
+  CartLookupResponseEvent,
+  CartClearRequestEvent,
+  CartClearResponseEvent,
+} from './events/cart.events';
+import { RequestResponseService } from '../events/request-response.service';
+import {
+  UserLookupRequestEvent,
+  UserLookupResponseEvent,
+} from '../users/events/user-lookup.event';
+import {
+  ProductLookupRequestEvent,
+  ProductLookupResponseEvent,
+} from '../products/events/product.events';
 
 @Injectable()
 export class CartsService {
   constructor(
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    private productsService: ProductsService,
-    private usersService: UsersService,
+    private requestResponseService: RequestResponseService,
   ) {}
 
   async getUserCart(userEmail: string): Promise<CartDocument> {
-    const user = await this.usersService.findByEmailWithId(userEmail);
+    // Get user via events
+    const userResponse =
+      await this.requestResponseService.sendRequest<UserLookupResponseEvent>(
+        new UserLookupRequestEvent(userEmail, ''),
+        'user.lookup.response',
+      );
 
-    let cart = await this.cartModel.findOne({ userId: user._id }).exec();
+    if (!userResponse.user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let cart = await this.cartModel
+      .findOne({ userId: userResponse.user._id })
+      .exec();
 
     if (!cart) {
       cart = new this.cartModel({
-        userId: user._id,
+        userId: userResponse.user!._id,
         items: [],
         totalAmount: 0,
       });
@@ -42,10 +66,18 @@ export class CartsService {
   ): Promise<CartDocument> {
     const { productId, quantity } = addToCartDto;
 
-    const product = await this.productsService.findById(productId);
-    if (!product) {
+    // Get product via events
+    const productResponse =
+      await this.requestResponseService.sendRequest<ProductLookupResponseEvent>(
+        new ProductLookupRequestEvent(productId, ''),
+        'product.lookup.response',
+      );
+
+    if (!productResponse.product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
+
+    const product = productResponse.product;
 
     if (product.stock < quantity) {
       throw new BadRequestException(
@@ -101,8 +133,18 @@ export class CartsService {
       throw new NotFoundException(`Product ${productId} not found in cart`);
     }
 
-    const product = await this.productsService.findById(productId);
-    if (product.stock < quantity) {
+    // Get product via events
+    const productResponse =
+      await this.requestResponseService.sendRequest<ProductLookupResponseEvent>(
+        new ProductLookupRequestEvent(productId, ''),
+        'product.lookup.response',
+      );
+
+    if (!productResponse.product) {
+      throw new NotFoundException(`Product with ID ${productId} not found`);
+    }
+
+    if (productResponse.product.stock < quantity) {
       throw new BadRequestException(`Insufficient stock`);
     }
 
@@ -142,5 +184,69 @@ export class CartsService {
 
   private calculateTotal(items: any[]): number {
     return items.reduce((total, item) => total + item.totalPrice, 0);
+  }
+
+  @OnEvent('cart.lookup.request')
+  async handleCartLookupRequest(
+    event: CartLookupRequestEvent & { requestId: string },
+  ): Promise<void> {
+    try {
+      const cart = await this.getUserCart(event.userEmail);
+
+      const response = new CartLookupResponseEvent(event.requestId, {
+        userId: cart.userId.toString(),
+        items: cart.items.map((item) => ({
+          productId: item.productId.toString(),
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+        totalAmount: cart.totalAmount,
+      });
+
+      this.requestResponseService.handleResponse(
+        'cart.lookup.response',
+        response,
+      );
+    } catch (error) {
+      const response = new CartLookupResponseEvent(
+        event.requestId,
+        null,
+        error.message,
+      );
+
+      this.requestResponseService.handleResponse(
+        'cart.lookup.response',
+        response,
+      );
+    }
+  }
+
+  @OnEvent('cart.clear.request')
+  async handleCartClearRequest(
+    event: CartClearRequestEvent & { requestId: string },
+  ): Promise<void> {
+    try {
+      await this.clearCart(event.userEmail);
+
+      const response = new CartClearResponseEvent(event.requestId, true);
+
+      this.requestResponseService.handleResponse(
+        'cart.clear.response',
+        response,
+      );
+    } catch (error) {
+      const response = new CartClearResponseEvent(
+        event.requestId,
+        false,
+        error.message,
+      );
+
+      this.requestResponseService.handleResponse(
+        'cart.clear.response',
+        response,
+      );
+    }
   }
 }
