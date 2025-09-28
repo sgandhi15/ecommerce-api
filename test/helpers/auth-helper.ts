@@ -33,7 +33,9 @@ export const getUserToken = async (
       .send({ email, password })
       .expect(201);
 
-    expect(response.body.access_token).toBeDefined();
+    if (!response.body.access_token) {
+      throw new Error('No access token received');
+    }
     return response.body.access_token;
   } catch (error) {
     console.error('Login failed:', error.message);

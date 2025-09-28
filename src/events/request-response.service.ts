@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class RequestResponseService {
@@ -20,7 +20,7 @@ export class RequestResponseService {
     responseEventName: string,
     timeoutMs: number = 10000,
   ): Promise<TResponse> {
-    const requestId = uuid();
+    const requestId = randomUUID();
 
     return new Promise<TResponse>((resolve, reject) => {
       // Set up timeout
