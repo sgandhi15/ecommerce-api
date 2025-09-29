@@ -1,5 +1,13 @@
 > NOTE: fixed problem with e2e tests by using randomUUID from crypto module instead of uuid library and also changed connection string in env example so that it works with docker compose
 
+## EDIT: To run tests in running containers
+
+- navigate to `ecommerce-api` directory
+- docker exec -t -i ecommerce-nest-api /bin/bash
+- npm run test:e2e
+
+---
+
 ## Project Setup
 
 1. Clone the repository
