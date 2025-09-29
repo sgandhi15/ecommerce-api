@@ -3,8 +3,8 @@
 ## EDIT: To run tests in running containers
 
 - navigate to `ecommerce-api` directory
-- docker exec -t -i ecommerce-nest-api /bin/bash
-- npm run test:e2e
+- run `docker exec -t -i ecommerce-nest-api /bin/bash` to get into the container
+- run `npm run test:e2e` to run the tests
 
 ---
 
